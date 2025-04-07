@@ -163,7 +163,9 @@ functions used with `after-change-functions'."
                             (list 'left-fringe
                                   'hideshowvis-hideable-marker
                                   (hideshowvis-fringe-marker-face (point) 'hideshowvis-hidable-face))))
-              (overlay-put ovl 'hideshowvis-hs t))))))))
+              (overlay-put ovl 'hideshowvis-hs t)
+              (when hideshowvis-overlay-priority
+                (overlay-put ovl 'priority hideshowvis-overlay-priority)))))))))
 
 ;;;###autoload
 (defun hideshowvis-click-fringe (event)
@@ -238,6 +240,9 @@ functions used with `after-change-functions'."
   '((t (:background "#ff8" :box t)))
   "Face to hightlight the ... area of hidden regions.")
 
+(defcustom hideshowvis-overlay-priority nil
+  "Overlay priority of `hideshowvis-symbols`.")
+
 (defcustom hideshowvis-fringe-marker-face-function nil
   "A function that calculates fringe marker face at given position."
   :type 'function)
@@ -257,6 +262,8 @@ functions used with `after-change-functions'."
                              (list 'left-fringe
                                    'hideshowvis-hidden-marker
                                    (hideshowvis-fringe-marker-face (overlay-start ov) 'hideshowvis-hidden-fringe-face))))
+    (when hideshowvis-overlay-priority
+      (overlay-put ov 'priority hideshowvis-overlay-priority))
     (overlay-put ov 'after-string
                  (propertize
                   (format "%d lines" (count-lines (overlay-start ov) (overlay-end ov)))
