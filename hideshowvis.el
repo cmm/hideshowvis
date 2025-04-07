@@ -129,7 +129,41 @@ this value (in bytes).  The minor mode can still be forced to be enabled using
 `(hideshowvis-mode 1)'.  Set this variable to nil to disable restriction."
   :type 'natnum)
 
-(defvar hideshowvis-highlighting-hs-regions-in-fringe nil)
+(defun hideshowvis--highlight-hs-regions-in-fringe (start end)
+  (save-excursion
+    (save-restriction
+      (when (and start end)
+        (narrow-to-region start end))
+      (goto-char (point-min))
+      (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
+      (while (search-forward-regexp hs-block-start-regexp nil t)
+        (when (if hideshowvis-ignore-same-line
+                  (let ((begin-line (save-excursion
+                                      (goto-char (match-beginning 0))
+                                      (line-number-at-pos (point)))))
+                    (save-excursion
+                      (goto-char (match-beginning 0))
+                      (ignore-errors
+                        (progn
+                          (funcall hs-forward-sexp-func 1)
+                          (> (line-number-at-pos (point)) begin-line)))))
+                t)
+          (let* ((ovl (make-overlay (match-beginning 0) (match-end 0))))
+            (overlay-put ovl 'before-string
+                         (propertize
+                          "*hideshowvis*"
+                          'display
+                          (list 'left-fringe
+                                'hideshowvis-hidable-marker
+                                (hideshowvis-fringe-marker-face (save-restriction
+                                                                  (widen)
+                                                                  (point))
+                                                                'hideshowvis-hidable-face))))
+            (overlay-put ovl 'hideshowvis-hs t)
+            (when hideshowvis-overlay-priority
+              (overlay-put ovl 'priority hideshowvis-overlay-priority))))))))
+
+(defvar-local hideshowvis-highlighting-hs-regions-in-fringe nil)
 
 (defun hideshowvis-highlight-hs-regions-in-fringe (&optional start end _old-text-length)
   "Will update the fringe indicators for all foldable regions in the buffer.
@@ -140,39 +174,8 @@ this happens for you.
 functions used with `after-change-functions'."
   (unless hideshowvis-highlighting-hs-regions-in-fringe
     (let ((hideshowvis-highlighting-hs-regions-in-fringe t))
-      (when hs-minor-mode
-        (save-excursion
-          (save-restriction
-            (when (and start end)
-              (narrow-to-region start end))
-            (goto-char (point-min))
-            (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
-            (while (search-forward-regexp hs-block-start-regexp nil t)
-              (when (if hideshowvis-ignore-same-line
-                        (let ((begin-line (save-excursion
-                                            (goto-char (match-beginning 0))
-                                            (line-number-at-pos (point)))))
-                          (save-excursion
-                            (goto-char (match-beginning 0))
-                            (ignore-errors
-                              (progn
-                                (funcall hs-forward-sexp-func 1)
-                                (> (line-number-at-pos (point)) begin-line)))))
-                      t)
-                (let* ((ovl (make-overlay (match-beginning 0) (match-end 0))))
-                  (overlay-put ovl 'before-string
-                               (propertize
-                                "*hideshowvis*"
-                                'display
-                                (list 'left-fringe
-                                      'hideshowvis-hidable-marker
-                                      (hideshowvis-fringe-marker-face (save-restriction
-                                                                        (widen)
-                                                                        (point))
-                                                                      'hideshowvis-hidable-face))))
-                  (overlay-put ovl 'hideshowvis-hs t)
-                  (when hideshowvis-overlay-priority
-                    (overlay-put ovl 'priority hideshowvis-overlay-priority)))))))))))
+      (when hideshowvis-minor-mode
+        (hideshowvis--highlight-hs-regions-in-fringe start end)))))
 
 ;;;###autoload
 (defun hideshowvis-click-fringe (event)
@@ -217,7 +220,7 @@ functions used with `after-change-functions'."
                       'hideshowvis-highlight-hs-regions-in-fringe))
         (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
         (remove-hook 'after-change-functions
-                     #'hideshowvis-highlight-hs-regions-in-fringe))
+                     'hideshowvis-highlight-hs-regions-in-fringe))
     (error
      (message "Failed to toggle `hideshowvis-minor-mode': %S" err))))
 
