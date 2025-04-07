@@ -129,6 +129,8 @@ this value (in bytes).  The minor mode can still be forced to be enabled using
 `(hideshowvis-mode 1)'.  Set this variable to nil to disable restriction."
   :type 'natnum)
 
+(defvar hideshowvis-highlighting-hs-regions-in-fringe nil)
+
 (defun hideshowvis-highlight-hs-regions-in-fringe (&optional start end _old-text-length)
   "Will update the fringe indicators for all foldable regions in the buffer.
 This can be slow for large buffers.  Adjust `hideshowvis-max-file-size' when
@@ -136,36 +138,41 @@ this happens for you.
 
 `START', `END', and `OLD-TEXT-LENGTH' are the same as other
 functions used with `after-change-functions'."
-  (when hs-minor-mode
-    (save-excursion
-      (save-restriction
-        (when (and start end)
-          (narrow-to-region start end))
-        (goto-char (point-min))
-        (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
-        (while (search-forward-regexp hs-block-start-regexp nil t)
-          (when (if hideshowvis-ignore-same-line
-                    (let ((begin-line (save-excursion
-                                        (goto-char (match-beginning 0))
-                                        (line-number-at-pos (point)))))
-                      (save-excursion
-                        (goto-char (match-beginning 0))
-                        (ignore-errors
-                          (progn
-                            (funcall hs-forward-sexp-func 1)
-                            (> (line-number-at-pos (point)) begin-line)))))
-                  t)
-            (let* ((ovl (make-overlay (match-beginning 0) (match-end 0))))
-              (overlay-put ovl 'before-string
-                           (propertize
-                            "*hideshowvis*"
-                            'display
-                            (list 'left-fringe
-                                  'hideshowvis-hidable-marker
-                                  (hideshowvis-fringe-marker-face (point) 'hideshowvis-hidable-face))))
-              (overlay-put ovl 'hideshowvis-hs t)
-              (when hideshowvis-overlay-priority
-                (overlay-put ovl 'priority hideshowvis-overlay-priority)))))))))
+  (unless hideshowvis-highlighting-hs-regions-in-fringe
+    (let ((hideshowvis-highlighting-hs-regions-in-fringe t))
+      (when hs-minor-mode
+        (save-excursion
+          (save-restriction
+            (when (and start end)
+              (narrow-to-region start end))
+            (goto-char (point-min))
+            (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
+            (while (search-forward-regexp hs-block-start-regexp nil t)
+              (when (if hideshowvis-ignore-same-line
+                        (let ((begin-line (save-excursion
+                                            (goto-char (match-beginning 0))
+                                            (line-number-at-pos (point)))))
+                          (save-excursion
+                            (goto-char (match-beginning 0))
+                            (ignore-errors
+                              (progn
+                                (funcall hs-forward-sexp-func 1)
+                                (> (line-number-at-pos (point)) begin-line)))))
+                      t)
+                (let* ((ovl (make-overlay (match-beginning 0) (match-end 0))))
+                  (overlay-put ovl 'before-string
+                               (propertize
+                                "*hideshowvis*"
+                                'display
+                                (list 'left-fringe
+                                      'hideshowvis-hidable-marker
+                                      (hideshowvis-fringe-marker-face (save-restriction
+                                                                        (widen)
+                                                                        (point))
+                                                                      'hideshowvis-hidable-face))))
+                  (overlay-put ovl 'hideshowvis-hs t)
+                  (when hideshowvis-overlay-priority
+                    (overlay-put ovl 'priority hideshowvis-overlay-priority)))))))))))
 
 ;;;###autoload
 (defun hideshowvis-click-fringe (event)
