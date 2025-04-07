@@ -162,7 +162,7 @@ functions used with `after-change-functions'."
                             'display
                             (list 'left-fringe
                                   'hideshowvis-hideable-marker
-                                  'hideshowvis-hidable-face)))
+                                  (hideshowvis-fringe-marker-face (point) 'hideshowvis-hidable-face))))
               (overlay-put ovl 'hideshowvis-hs t))))))))
 
 ;;;###autoload
@@ -238,6 +238,15 @@ functions used with `after-change-functions'."
   '((t (:background "#ff8" :box t)))
   "Face to hightlight the ... area of hidden regions.")
 
+(defcustom hideshowvis-fringe-marker-face-function nil
+  "A function that calculates fringe marker face at given position."
+  :type 'function)
+
+(defun hideshowvis-fringe-marker-face (pos default)
+  (let ((face (and hideshowvis-fringe-marker-face-function
+                   (funcall hideshowvis-fringe-marker-face-function pos))))
+    (or face default)))
+
 (defun hideshowvis-display-code-line-counts (ov)
   "Extend overlay OV to show number of lines hidden for `hideshowvis-symbols'."
   (when (eq 'code (overlay-get ov 'hs))
@@ -245,9 +254,9 @@ functions used with `after-change-functions'."
     (overlay-put ov 'before-string
                  (propertize "*fringe-dummy*"
                              'display
-                             '(left-fringe
-                               hideshowvis-hidden-marker
-                               hideshowvis-hidden-fringe-face)))
+                             (list 'left-fringe
+                                   'hideshowvis-hidden-marker
+                                   (hideshowvis-fringe-marker-face (overlay-start ov) 'hideshowvis-hidden-fringe-face))))
     (overlay-put ov 'after-string
                  (propertize
                   (format "%d lines" (count-lines (overlay-start ov) (overlay-end ov)))
