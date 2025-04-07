@@ -106,7 +106,7 @@
   "Fringe markers for regions foldable by hideshow."
   :group 'hideshow)
 
-(define-fringe-bitmap 'hideshowvis-hideable-marker [0 0 0 126 126 0 0 0])
+(define-fringe-bitmap 'hideshowvis-hidable-marker [0 0 0 126 126 0 0 0])
 
 (defconst hideshowvis-version "v0.8" "Version of hideshowvis minor mode.")
 
@@ -161,7 +161,7 @@ functions used with `after-change-functions'."
                             "*hideshowvis*"
                             'display
                             (list 'left-fringe
-                                  'hideshowvis-hideable-marker
+                                  'hideshowvis-hidable-marker
                                   (hideshowvis-fringe-marker-face (point) 'hideshowvis-hidable-face))))
               (overlay-put ovl 'hideshowvis-hs t)
               (when hideshowvis-overlay-priority
