@@ -46,10 +46,6 @@
 ;;                     'c++-mode-hook))
 ;;   (add-hook hook 'hideshowvis-enable))
 
-;; If enabling hideshowvis-minor-mode is slow on your machine use M-x,
-;; customize-option, hideshowvis-ignore-same-line and set it to nil.  This will
-;; then display - icons for foldable regions of one line, too but is faster
-
 ;; To enable displaying a + symbol in the fringe for folded regions,
 ;; use:
 
@@ -114,13 +110,6 @@
   '((t (:foreground "#ccc" :box t)))
   "Face to highlight foldable regions.")
 
-(defcustom hideshowvis-ignore-same-line t
-  "No + for single line regions.
-Do not display foldable regions in the fringe if the matching closing
-parenthesis is on the same line.  Set this to nil if enabling the minor mode is
-slow on your machine"
-  :type 'boolean)
-
 (defcustom hideshowvis-max-file-size (* 1024 100)
   "No highlighting in files larger than this number of bytes.
 
@@ -144,17 +133,14 @@ functions used with `after-change-functions'."
         (goto-char (point-min))
         (remove-overlays (point-min) (point-max) 'hideshowvis-hs t)
         (while (search-forward-regexp hs-block-start-regexp nil t)
-          (when (if hideshowvis-ignore-same-line
-                    (let ((begin-line (save-excursion
-                                        (goto-char (match-beginning 0))
-                                        (line-number-at-pos (point)))))
-                      (save-excursion
-                        (goto-char (match-beginning 0))
-                        (ignore-errors
-                          (progn
-                            (funcall hs-forward-sexp-func 1)
-                            (> (line-number-at-pos (point)) begin-line)))))
-                  t)
+          (when (let ((start (match-beginning 0)))
+                  (save-excursion
+                    (goto-char start)
+                    (ignore-errors
+                      (let ((end (progn
+                                   (funcall hs-forward-sexp-func 1) (point))))
+                        (skip-chars-backward "^\n" start)
+                        (/= (point) start)))))
             (let* ((ovl (make-overlay (match-beginning 0) (match-end 0))))
               (overlay-put ovl 'before-string
                            (propertize
